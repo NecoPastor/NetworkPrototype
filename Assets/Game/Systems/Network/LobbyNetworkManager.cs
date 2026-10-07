@@ -1,3 +1,5 @@
+using Game.Systems;
+using Game.Systems.Service;
 using Steamworks;
 using System;
 using TMPro;
@@ -5,12 +7,11 @@ using UnityEngine;
 
 public class LobbyNetworkManager : MonoBehaviour
 {
-    public static LobbyNetworkManager Instance { get; private set; }
-
     public event Action<CSteamID, bool> OnLobbyCreatedEvent;
     public event Action<bool> OnLobbyJoinedEvent;
 
     public CSteamID CurrentLobbyID { get; private set; }
+    public CSteamID HostSteamID { get; private set; }
 
     private Callback<LobbyCreated_t> m_LobbyCreated;
     private Callback<GameLobbyJoinRequested_t> m_LobbyJoinRequested;
@@ -19,44 +20,59 @@ public class LobbyNetworkManager : MonoBehaviour
 
     [SerializeField] private TMP_Text textDebug;
 
-    private void Awake()
-    {
-        Application.runInBackground = true;
-
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-            return;
-        }
-
-        Instance = this;
-        DontDestroyOnLoad(gameObject);
-    }
+    private NetworkManager networkManager;
 
     private void Start()
     {
-        if (!SteamAPI.IsSteamRunning())
+        if (ServiceLocator.TryGetService(out NetworkManager provider))
+            networkManager = provider;
+
+        if (networkManager == null)
         {
-            string message = "[LobbyNetworkManager] Steam is not running!";
+            string message = "[LobbyNetworkManager] NetworkManager service is null!";
             Debug.LogError(message);
             SetDebugText(message);
             return;
         }
 
+        if (!networkManager.IsInitialized)
+        {
+            string message = "[LobbyNetworkManager] NetworkManager service is not initialized!";
+            Debug.LogError(message);
+            SetDebugText(message);
+            return;
+        }
+
+        RegisterCallbacks();
+        CheckCommandLineInvite();
+    }
+
+    private void RegisterCallbacks()
+    {
         m_LobbyCreated = Callback<LobbyCreated_t>.Create(OnLobbyCreated);
         m_LobbyJoinRequested = Callback<GameLobbyJoinRequested_t>.Create(OnGameLobbyJoinRequested);
         m_LobbyEntered = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
         m_LobbyChatUpdate = Callback<LobbyChatUpdate_t>.Create(OnLobbyChatUpdate);
-
-        CheckCommandLineInvite();
     }
 
-    private void Update()
+    private void OnDisable()
     {
-        if (SteamAPI.IsSteamRunning())
-        {
-            SteamAPI.RunCallbacks();
-        }
+        UnregisterCallbacks();
+    }
+
+    private void UnregisterCallbacks()
+    {
+        m_LobbyCreated?.Dispose();
+        m_LobbyCreated = null;
+
+        m_LobbyJoinRequested?.Dispose();
+        m_LobbyJoinRequested = null;
+
+        m_LobbyEntered?.Dispose();
+        m_LobbyEntered = null;
+
+        m_LobbyChatUpdate?.Dispose();
+        m_LobbyChatUpdate = null;
     }
 
     public void CreateLobby()
@@ -79,8 +95,15 @@ public class LobbyNetworkManager : MonoBehaviour
         }
 
         CurrentLobbyID = new CSteamID(callback.m_ulSteamIDLobby);
+        HostSteamID = SteamUser.GetSteamID();
 
-        SteamMatchmaking.SetLobbyData(CurrentLobbyID, "HostAddress", SteamUser.GetSteamID().ToString());
+        // Сохраняем ID хоста в сервис NetworkManager
+        if (networkManager != null)
+        {
+            networkManager.TargetHostSteamID = HostSteamID;
+        }
+
+        SteamMatchmaking.SetLobbyData(CurrentLobbyID, "HostAddress", HostSteamID.ToString());
         SteamMatchmaking.SetLobbyData(CurrentLobbyID, "name", $"{SteamFriends.GetPersonaName()}'s Game");
 
         SteamFriends.SetRichPresence("connect", $"+connect_lobby {CurrentLobbyID}");
@@ -111,6 +134,18 @@ public class LobbyNetworkManager : MonoBehaviour
         }
 
         CurrentLobbyID = new CSteamID(callback.m_ulSteamIDLobby);
+
+        // Извлекаем SteamID хоста
+        string hostAddressStr = SteamMatchmaking.GetLobbyData(CurrentLobbyID, "HostAddress");
+        if (ulong.TryParse(hostAddressStr, out ulong hostSteamIDUlong))
+        {
+            HostSteamID = new CSteamID(hostSteamIDUlong);
+            if (networkManager != null)
+            {
+                networkManager.TargetHostSteamID = HostSteamID;
+            }
+        }
+
         string successMessage = $"[LobbyNetworkManager] Successfully in lobby! Member count: {SteamMatchmaking.GetNumLobbyMembers(CurrentLobbyID)}";
         Debug.Log(successMessage);
         SetDebugText(successMessage);
@@ -137,24 +172,30 @@ public class LobbyNetworkManager : MonoBehaviour
 
     public void OpenInviteOverlay()
     {
-        bool isLobbyValid = CurrentLobbyID.IsValid();
-        bool isOverlayEnabled = SteamUtils.IsOverlayEnabled();
-
-        Debug.Log($"[LobbyNetworkManager] Debug Check -> Lobby ID Valid: {isLobbyValid} (ID: {CurrentLobbyID}), Overlay Enabled: {isOverlayEnabled}");
-
-        if (isLobbyValid && isOverlayEnabled)
+        // 1. Проверка валидности лобби
+        if (!CurrentLobbyID.IsValid())
         {
-            string message = "[LobbyNetworkManager] Opening Steam Invite Dialog...";
-            Debug.Log(message);
-            SetDebugText(message);
-            SteamFriends.ActivateGameOverlayInviteDialog(CurrentLobbyID);
+            string errorMsg = $"[LobbyNetworkManager] Failed to open invite! Invalid Lobby ID: {CurrentLobbyID}";
+            Debug.LogWarning(errorMsg);
+            SetDebugText(errorMsg);
+            return;
         }
-        else
+
+        // 2. Проверка доступности оверлея Steam
+        if (!SteamUtils.IsOverlayEnabled())
         {
-            string warningMessage = $"[LobbyNetworkManager] Failed to open invite! Lobby Valid: {isLobbyValid}, Overlay Enabled: {isOverlayEnabled}";
-            Debug.LogWarning(warningMessage);
-            SetDebugText(warningMessage);
+            string warningMsg = "[LobbyNetworkManager] Failed to open invite! Steam Overlay is disabled or unavailable.";
+            Debug.LogWarning(warningMsg);
+            SetDebugText(warningMsg);
+            return;
         }
+
+        // Успешный сценарий
+        string successMsg = "[LobbyNetworkManager] Opening Steam Invite Dialog...";
+        Debug.Log(successMsg);
+        SetDebugText(successMsg);
+
+        SteamFriends.ActivateGameOverlayInviteDialog(CurrentLobbyID);
     }
 
     private void CheckCommandLineInvite()

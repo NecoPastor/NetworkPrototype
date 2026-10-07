@@ -149,7 +149,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 83785f96f81da524f981d3ed5193dbbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ServiceBootstrapper
-  loadOverDelay: 5
+  loadOverDelay: 10
   serviceAssets: {fileID: 11400000, guid: d854a298ef337d248b5f80888a9fae5a, type: 2}
   eventBootOver:
     m_PersistentCalls:

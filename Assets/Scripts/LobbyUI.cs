@@ -5,6 +5,7 @@ using UnityEngine.UI;
 
 public class LobbyUI : MonoBehaviour
 {
+    [SerializeField] private LobbyNetworkManager lobby;
     [Header("UI References")]
     [SerializeField] private Button createLobbyButton;
     [SerializeField] private Button inviteButton;
@@ -23,33 +24,30 @@ public class LobbyUI : MonoBehaviour
             inviteButton.interactable = false;
         }
 
-        if (LobbyNetworkManager.Instance != null)
-        {
-            LobbyNetworkManager.Instance.OnLobbyCreatedEvent += OnLobbyCreated;
-            LobbyNetworkManager.Instance.OnLobbyJoinedEvent += OnLobbyJoined;
-        }
+        lobby.OnLobbyCreatedEvent += OnLobbyCreated;
+        lobby.OnLobbyJoinedEvent += OnLobbyJoined;
 
         UpdateStatus("Ready to connect");
     }
 
     private void OnDestroy()
     {
-        if (LobbyNetworkManager.Instance != null)
+        if (lobby != null)
         {
-            LobbyNetworkManager.Instance.OnLobbyCreatedEvent -= OnLobbyCreated;
-            LobbyNetworkManager.Instance.OnLobbyJoinedEvent -= OnLobbyJoined;
+            lobby.OnLobbyCreatedEvent -= OnLobbyCreated;
+            lobby.OnLobbyJoinedEvent -= OnLobbyJoined;
         }
     }
 
     private void CreateLobby()
     {
         UpdateStatus("Creating lobby...");
-        LobbyNetworkManager.Instance.CreateLobby();
+        lobby.CreateLobby();
     }
 
     private void OnInviteButtonClicked()
     {
-        LobbyNetworkManager.Instance.OpenInviteOverlay();
+        lobby.OpenInviteOverlay();
     }
 
     private void OnLobbyCreated(CSteamID lobbyId, bool success)
