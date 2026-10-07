@@ -72,5 +72,4 @@ public class ServiceBootstrapper : MonoBehaviour
         eventBootOver.Invoke();
         Destroy(this);
     }
-
 }

@@ -4,5 +4,4 @@ namespace Game.Systems.GameStateMachine
     {
         public abstract void Enter();
     }
-
 }

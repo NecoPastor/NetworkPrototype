@@ -26,16 +26,15 @@ public class GameEntryPoint : MonoBehaviour
 
     private void HandleBootOver(ServiceBootOverEvent _)
     {
-        LoadMainMenu();
+        SwitchState();
     }
 
-    private void LoadMainMenu()
+    private void SwitchState()
     {
         if (globalEventHub != null)
             globalEventHub.EventBus.Unsubscribe<ServiceBootOverEvent>(HandleBootOver);
-
+        //TODO add name stateSwitch serialize field!!!
         if (ServiceLocator.TryGetService(out StateMachine stateMachine))
-            stateMachine.SwitchState<MainMenu>();
+            stateMachine.SwitchState<Lobby>();
     }
-
 }
