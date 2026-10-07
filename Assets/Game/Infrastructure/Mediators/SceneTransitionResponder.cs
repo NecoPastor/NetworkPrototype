@@ -31,6 +31,15 @@ public class SceneTransitionResponder : MonoBehaviour, IGameSystem
             }
         }
 
+        if (next is Lobby)
+        {
+            if (sceneLoader)
+            {
+                var settings = SceneReference.Instance.GetByType<LobbySceneSettings>();
+                sceneLoader.Load(settings.SceneName);
+            }
+        }
+
         if (next is Playing)
         {
             if (sceneLoader)
