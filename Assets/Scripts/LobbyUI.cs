@@ -12,9 +12,13 @@ public class LobbyUI : MonoBehaviour
 
     private void Start()
     {
-        if (createLobbyButton != null)
+        //if (createLobbyButton != null)
+        //{
+        //    createLobbyButton.onClick.AddListener(OnCreateLobbyButtonClicked);
+        //}
+        if (SteamAPI.IsSteamRunning())
         {
-            createLobbyButton.onClick.AddListener(OnCreateLobbyButtonClicked);
+            OnCreateLobbyButtonClicked();
         }
 
         if (inviteButton != null)

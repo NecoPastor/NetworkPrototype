@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e8ae6ce8b1d18a94d923e0868d292bee, type: 3}
   m_Name: Game_SceneSettings
   m_EditorClassIdentifier: Assembly-CSharp::GameSceneSettings
-  sceneName: Game
+  sceneName: Lobby
