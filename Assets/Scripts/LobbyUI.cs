@@ -12,13 +12,9 @@ public class LobbyUI : MonoBehaviour
 
     private void Start()
     {
-        //if (createLobbyButton != null)
-        //{
-        //    createLobbyButton.onClick.AddListener(OnCreateLobbyButtonClicked);
-        //}
-        if (SteamAPI.IsSteamRunning())
+        if (createLobbyButton != null)
         {
-            OnCreateLobbyButtonClicked();
+            CreateLobby();
         }
 
         if (inviteButton != null)
@@ -45,7 +41,7 @@ public class LobbyUI : MonoBehaviour
         }
     }
 
-    private void OnCreateLobbyButtonClicked()
+    private void CreateLobby()
     {
         UpdateStatus("Creating lobby...");
         LobbyNetworkManager.Instance.CreateLobby();

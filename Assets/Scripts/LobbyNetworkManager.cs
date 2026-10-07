@@ -137,7 +137,12 @@ public class LobbyNetworkManager : MonoBehaviour
 
     public void OpenInviteOverlay()
     {
-        if (CurrentLobbyID.IsValid() && SteamUtils.IsOverlayEnabled())
+        bool isLobbyValid = CurrentLobbyID.IsValid();
+        bool isOverlayEnabled = SteamUtils.IsOverlayEnabled();
+
+        Debug.Log($"[LobbyNetworkManager] Debug Check -> Lobby ID Valid: {isLobbyValid} (ID: {CurrentLobbyID}), Overlay Enabled: {isOverlayEnabled}");
+
+        if (isLobbyValid && isOverlayEnabled)
         {
             string message = "[LobbyNetworkManager] Opening Steam Invite Dialog...";
             Debug.Log(message);
@@ -146,7 +151,7 @@ public class LobbyNetworkManager : MonoBehaviour
         }
         else
         {
-            string warningMessage = "[LobbyNetworkManager] Steam Overlay is disabled or Lobby ID is invalid!";
+            string warningMessage = $"[LobbyNetworkManager] Failed to open invite! Lobby Valid: {isLobbyValid}, Overlay Enabled: {isOverlayEnabled}";
             Debug.LogWarning(warningMessage);
             SetDebugText(warningMessage);
         }
