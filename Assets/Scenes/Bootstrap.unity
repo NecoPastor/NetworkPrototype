@@ -151,21 +151,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ServiceBootstrapper
   loadOverDelay: 5
   serviceAssets: {fileID: 11400000, guid: d854a298ef337d248b5f80888a9fae5a, type: 2}
-  eventBootOver:
-    m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 806336142}
-        m_TargetAssemblyTypeName: ServiceBootOverDispatcher, Assembly-CSharp
-        m_MethodName: CallServiceBootOver
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+  onServicesBootstrapped: {fileID: 11400000, guid: cc2b5785749ccdf45b031988e7d2281e, type: 2}
 --- !u!4 &806336141
 Transform:
   m_ObjectHideFlags: 0
@@ -193,53 +179,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c18c91c5311d3bf4f9a82d35f7b6d412, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ServiceBootOverDispatcher
---- !u!1 &1189210683
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1189210685}
-  - component: {fileID: 1189210684}
-  m_Layer: 0
-  m_Name: GameEntryPoint
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1189210684
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1189210683}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 678be56fc09d0944e9e7c3239c424cae, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GameEntryPoint
---- !u!4 &1189210685
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1189210683}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  onServicesBootstrapped: {fileID: 11400000, guid: cc2b5785749ccdf45b031988e7d2281e, type: 2}
+  nextGameState: Lobby
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 806336141}
-  - {fileID: 1189210685}

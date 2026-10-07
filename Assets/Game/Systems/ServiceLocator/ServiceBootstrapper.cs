@@ -1,12 +1,14 @@
+using Game.Systems.AssetEventBus;
 using Game.Systems.Service;
 using UnityEngine;
-using UnityEngine.Events;
 
 public class ServiceBootstrapper : MonoBehaviour
 {
-    [SerializeField] private float loadOverDelay = 1;
+    [SerializeField, Range(1, 60)] private float loadOverDelay = 1;
     [SerializeField] private ServiceAssets serviceAssets;
-    [SerializeField] private UnityEvent eventBootOver;
+
+    [Header("Event Channels")]
+    [SerializeField] private VoidEventChannel onServicesBootstrapped;
 
     private void Start()
     {
@@ -45,31 +47,12 @@ public class ServiceBootstrapper : MonoBehaviour
                 system.Initialize();
         }
 
-        //foreach (var prefab in serviceAssets.servicePrefabs)
-        //{
-        //    var gameSystem = prefab.GetComponents<IGameSystem>();
-        //    GameObject instance = null;
-
-        //    if (ServiceUtils.GetProvidedType(gameSystem, out var existService))
-        //    {
-        //        instance = existService;
-        //    }
-        //    else
-        //    {
-        //        instance = Instantiate(prefab);
-        //    }
-
-        //    var systems = instance.GetComponents<IGameSystem>();
-        //    foreach (var system in systems)
-        //        system.Initialize();
-        //}
-
         Invoke(nameof(CreateServices), loadOverDelay);
     }
 
     protected virtual void CreateServices()
     {
-        eventBootOver.Invoke();
+        onServicesBootstrapped?.RaiseEvent();
         Destroy(this);
     }
 }

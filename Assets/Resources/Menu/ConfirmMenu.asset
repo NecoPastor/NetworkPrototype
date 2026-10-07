@@ -16,5 +16,5 @@ MonoBehaviour:
   Items:
   - {fileID: 11400000, guid: e8120b1c26517b443a18a65fbbacb9c9, type: 2}
   - {fileID: 11400000, guid: 0565c50fc2ea25d4f824b77de083a943, type: 2}
-  ItemSpacing: 50
+  ItemSpacing: 30
   SortByCondition: 1

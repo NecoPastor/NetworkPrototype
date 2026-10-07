@@ -57,7 +57,7 @@ namespace Game.Systems
 
                 if (!IsInitialized)
                 {
-                    LogError("[Steamworks.NET] SteamAPI_Init() failed. Is Steam running?");
+                    LogWarning("[Steamworks.NET] SteamAPI_Init() failed. Is Steam running?");
                     return;
                 }
 
@@ -140,6 +140,15 @@ namespace Game.Systems
         private void Log(string message)
         {
             Debug.Log(message);
+            if (textDebug != null)
+            {
+                textDebug.text = message;
+            }
+        }
+
+        private void LogWarning(string message)
+        {
+            Debug.LogWarning(message);
             if (textDebug != null)
             {
                 textDebug.text = message;

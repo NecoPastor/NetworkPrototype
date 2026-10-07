@@ -6,7 +6,7 @@ namespace Game.Systems.AssetEventBus
     /// <summary>
     /// Абстрактный ScriptableObject-канал для передачи данных типа T через инспектор Unity.
     /// </summary>
-    public abstract class EventChannelSO<T> : ScriptableObject
+    public abstract class EventChannel<T> : ScriptableObject
     {
         private Action<T> _onEventRaised;
 
