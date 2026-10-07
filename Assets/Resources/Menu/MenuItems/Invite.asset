@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Game.System.MainMenu.MenuItemConfig
   Title: Invite
   Icon: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
-  Action: {fileID: 11400000, guid: 86fc287319979dc428a0f0054405c51c, type: 2}
-  Condition: {fileID: 11400000, guid: 8c5cd6a72fcc2c3449bcb9982e59ef34, type: 2}
+  Action: {fileID: 0}
+  Condition: {fileID: 0}
