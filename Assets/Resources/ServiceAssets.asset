@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ServiceAssets
   m_EditorClassIdentifier: Assembly-CSharp::Game.System.Service.ServiceAssets
   servicePrefabs:
-  - {fileID: 523333269578064747, guid: ee85952155c63ce49ba44230f8db355a, type: 3}
   - {fileID: 2731631989583187078, guid: b1a74812dadd4104e8d16c326cc5e114, type: 3}
   - {fileID: 1417211373407315368, guid: 77372e8e411a46647b906b0b5601af30, type: 3}
   - {fileID: 6570897296710009482, guid: a3e0352e5e421e24d8cac9ba0df179f0, type: 3}
+  - {fileID: 2620584749366141148, guid: 9cfc5cc61a0084c419c4ca862a55678f, type: 3}
