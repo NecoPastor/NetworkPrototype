@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8862134089228059262}
+  - component: {fileID: 6988718747548172291}
   - component: {fileID: 5650382140486468838}
   - component: {fileID: 4366153349434193630}
   m_Layer: 0
@@ -33,6 +34,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6988718747548172291
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 445169776846272940}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02efb50dba2b8e1408d88f11003be7a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Systems.FishNetworkManagerProvider
+  networkManager: {fileID: 5650382140486468838}
 --- !u!114 &5650382140486468838
 MonoBehaviour:
   m_ObjectHideFlags: 0
