@@ -185,6 +185,5 @@ public class LobbyChatManager : MonoBehaviour
 
         if (inputFieldMessage != null)
             inputFieldMessage.onSubmit.RemoveListener(OnInputSubmit);
-
     }
 }

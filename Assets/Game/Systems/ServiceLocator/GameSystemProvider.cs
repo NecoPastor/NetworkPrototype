@@ -17,7 +17,5 @@ namespace Game.Systems.Service
         public void Shutdown() => RemoveService();
 
         private void OnDestroy() => Shutdown();
-
-
     }
 }
