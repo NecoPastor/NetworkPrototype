@@ -6,5 +6,4 @@ namespace Game.Systems.GameStateMachine
         {
         }
     }
-
 }

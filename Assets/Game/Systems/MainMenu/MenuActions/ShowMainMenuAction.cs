@@ -15,6 +15,5 @@ namespace Game.Systems.MainMenu
             var builder = FindAnyObjectByType<MenuBuilder>();
             builder?.BuildMenu(menuConfig);
         }
-
     }
 }

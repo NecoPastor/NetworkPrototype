@@ -12,6 +12,5 @@ namespace Game.Systems.MainMenu
         [Header("Behavior")]
         [SerializeReference] public MenuActionBase Action;
         [SerializeReference] public MenuConditionBase Condition;
-
     }
 }

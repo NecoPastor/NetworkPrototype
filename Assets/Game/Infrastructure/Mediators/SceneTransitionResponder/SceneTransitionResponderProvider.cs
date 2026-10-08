@@ -8,6 +8,5 @@ namespace Game.Systems
         [SerializeField] private SceneTransitionResponder sceneTransitionResponder;
 
         public SceneTransitionResponder Get() => sceneTransitionResponder;
-
     }
 }

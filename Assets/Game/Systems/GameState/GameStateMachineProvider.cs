@@ -9,7 +9,5 @@ namespace Game.Systems
         [SerializeField] private StateMachine gameStateMachine;
 
         public StateMachine Get() => gameStateMachine;
-
     }
 }
-

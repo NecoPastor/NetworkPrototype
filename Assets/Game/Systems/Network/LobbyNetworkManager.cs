@@ -9,10 +9,8 @@ public class LobbyNetworkManager : MonoBehaviour
 {
     public event Action<CSteamID, bool> OnLobbyCreatedEvent;
     public event Action<bool> OnLobbyJoinedEvent;
-
     public CSteamID CurrentLobbyID { get; private set; }
     public CSteamID HostSteamID { get; private set; }
-
     private Callback<LobbyCreated_t> m_LobbyCreated;
     private Callback<GameLobbyJoinRequested_t> m_LobbyJoinRequested;
     private Callback<LobbyEnter_t> m_LobbyEntered;
