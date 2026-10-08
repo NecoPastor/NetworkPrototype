@@ -1,3 +1,4 @@
+using FishNet;
 using Game.Systems;
 using Game.Systems.Service;
 using Steamworks;
@@ -109,6 +110,16 @@ public class LobbyNetworkManager : MonoBehaviour
         string successMessage = $"[LobbyNetworkManager] Lobby Created! Waiting for player... (ID: {CurrentLobbyID})";
         Debug.Log(successMessage);
         SetDebugText(successMessage);
+
+
+        if (!InstanceFinder.IsServer && !InstanceFinder.IsClient)
+        {
+            InstanceFinder.NetworkManager.ServerManager.StartConnection();
+            InstanceFinder.NetworkManager.ClientManager.StartConnection();
+            Debug.Log("[LobbyNetworkManager] FishNet Host started successfully!");
+        }
+
+
         OnLobbyCreatedEvent?.Invoke(CurrentLobbyID, true);
     }
 
@@ -147,6 +158,30 @@ public class LobbyNetworkManager : MonoBehaviour
         string successMessage = $"[LobbyNetworkManager] Successfully in lobby! Member count: {SteamMatchmaking.GetNumLobbyMembers(CurrentLobbyID)}";
         Debug.Log(successMessage);
         SetDebugText(successMessage);
+
+
+        // --- FishNet Integration ---
+        if (HostSteamID == SteamUser.GetSteamID())
+        {
+            // Host already started network connection in OnLobbyCreated, do nothing here to avoid resetting state.
+        }
+        else
+        {
+            // If we are a client, pass host address to transport and start client connection
+            if (!InstanceFinder.IsClient)
+            {
+                var transport = InstanceFinder.NetworkManager.GetComponentInChildren<FishySteamworks.FishySteamworks>();
+                if (transport != null)
+                {
+                    transport.SetClientAddress(hostAddressStr);
+                }
+
+                InstanceFinder.NetworkManager.ClientManager.StartConnection();
+                Debug.Log($"[LobbyNetworkManager] FishNet Client started, connecting to host: {hostAddressStr}...");
+            }
+        }
+        // ---------------------------
+
 
         OnLobbyJoinedEvent?.Invoke(true);
     }

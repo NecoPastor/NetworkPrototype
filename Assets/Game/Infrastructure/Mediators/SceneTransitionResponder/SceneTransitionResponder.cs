@@ -35,7 +35,16 @@ public class SceneTransitionResponder : MonoBehaviour, IGameSystem
         {
             if (mapping.GameStateName == nextStateTypeName && mapping.SceneSettings != null)
             {
-                _sceneLoader.Load(mapping.SceneSettings.SceneName);
+                string sceneName = mapping.SceneSettings.SceneName;
+
+                if (mapping.SceneSettings.IsNetworked)
+                {
+                    _sceneLoader.LoadNetworkScene(sceneName);
+                }
+                else
+                {
+                    _sceneLoader.Load(sceneName);
+                }
                 break;
             }
         }
@@ -68,6 +77,6 @@ public class SceneTransitionResponder : MonoBehaviour, IGameSystem
         public string GameStateName;
 
         [Tooltip("Ссылка на настройки соответствующей сцены")]
-        public SceneSettings SceneSettings; // Предполагается, что MainMenuSceneSettings наследуется от SceneSettings
+        public SceneSettings SceneSettings;
     }
 }

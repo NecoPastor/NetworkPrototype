@@ -1,49 +1,64 @@
 using FishNet.Connection;
+using FishNet.Managing.Scened;
 using FishNet.Object;
-using FishNet.Transporting;
 using UnityEngine;
 
 public class CombatPlayerSpawner : NetworkBehaviour
 {
     [SerializeField] private NetworkObject playerPrefab;
     [SerializeField] private Transform spawnPoint;
+    [SerializeField] private string combatSceneName = "Combat";
 
     public override void OnStartServer()
     {
         base.OnStartServer();
-
-        // Subscribe to remote connection state changes
-        ServerManager.OnRemoteConnectionState += ServerManager_OnRemoteConnectionState;
-
-        // Spawn for already connected clients (like host)
-        foreach (var conn in ServerManager.Clients.Values)
+        if (SceneManager != null)
         {
-            SpawnPlayerForConnection(conn);
+            SceneManager.OnLoadEnd += SceneManager_OnLoadEnd;
         }
     }
 
     public override void OnStopServer()
     {
         base.OnStopServer();
-
-        if (ServerManager != null)
+        if (SceneManager != null)
         {
-            ServerManager.OnRemoteConnectionState -= ServerManager_OnRemoteConnectionState;
+            SceneManager.OnLoadEnd -= SceneManager_OnLoadEnd;
         }
     }
 
-    private void ServerManager_OnRemoteConnectionState(NetworkConnection conn, RemoteConnectionStateArgs args)
+    private void SceneManager_OnLoadEnd(SceneLoadEndEventArgs args)
     {
         if (!base.IsServer) return;
 
-        if (args.ConnectionState == RemoteConnectionState.Started)
+        bool targetSceneLoaded = false;
+        if (args.LoadedScenes != null)
         {
-            SpawnPlayerForConnection(conn);
+            foreach (var scene in args.LoadedScenes)
+            {
+                if (scene.name == combatSceneName)
+                {
+                    targetSceneLoaded = true;
+                    break;
+                }
+            }
+        }
+
+        if (!targetSceneLoaded) return;
+
+        if (args.QueueData.Connections != null)
+        {
+            foreach (NetworkConnection conn in args.QueueData.Connections)
+            {
+                SpawnPlayer(conn);
+            }
         }
     }
 
-    private void SpawnPlayerForConnection(NetworkConnection conn)
+    private void SpawnPlayer(NetworkConnection conn)
     {
+        if (conn == null || !conn.IsAuthenticated) return;
+
         foreach (var obj in conn.Objects)
         {
             if (obj != null && obj.gameObject.name.Contains(playerPrefab.gameObject.name))
@@ -52,12 +67,10 @@ public class CombatPlayerSpawner : NetworkBehaviour
             }
         }
 
-        Vector3 spawnPosition = spawnPoint != null ? spawnPoint.position : Vector3.zero;
-        Quaternion spawnRotation = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
+        Vector3 position = spawnPoint != null ? spawnPoint.position : Vector3.zero;
+        Quaternion rotation = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
 
-        NetworkObject spawnedInstance = Instantiate(playerPrefab, spawnPosition, spawnRotation);
-
-        ServerManager.Spawn(spawnedInstance, conn);
-        Debug.Log($"[CombatPlayerSpawner] Spawned player for Client ID: {conn.ClientId}");
+        NetworkObject playerInstance = Instantiate(playerPrefab, position, rotation);
+        ServerManager.Spawn(playerInstance, conn);
     }
 }
