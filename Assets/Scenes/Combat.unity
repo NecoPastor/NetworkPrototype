@@ -414,6 +414,7 @@ MonoBehaviour:
   _networkObjectCache: {fileID: 0}
   playerPrefab: {fileID: 8109830350595016586, guid: e31474e618d814b429ffa78f78ddb5b7, type: 3}
   spawnPoint: {fileID: 1112315079}
+  combatSceneName: Combat
 --- !u!114 &1112315082
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -447,7 +448,7 @@ MonoBehaviour:
   <PrefabId>k__BackingField: 65535
   <SpawnableCollectionId>k__BackingField: 0
   <AssetPathHash>k__BackingField: 0
-  SceneId: 3738697677
+  SceneId: 3755338740
   SerializedTransformProperties:
     Position: {x: 0, y: 0, z: 0}
     Rotation: {x: 0, y: 0, z: 0, w: 0}

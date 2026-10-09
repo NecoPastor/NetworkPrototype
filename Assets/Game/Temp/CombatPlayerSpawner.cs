@@ -2,6 +2,7 @@ using FishNet.Connection;
 using FishNet.Managing.Scened;
 using FishNet.Object;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class CombatPlayerSpawner : NetworkBehaviour
 {
@@ -12,8 +13,10 @@ public class CombatPlayerSpawner : NetworkBehaviour
     public override void OnStartServer()
     {
         base.OnStartServer();
+
         if (SceneManager != null)
         {
+            // Подписываемся на стандартное событие FishNet
             SceneManager.OnLoadEnd += SceneManager_OnLoadEnd;
         }
     }
@@ -21,6 +24,7 @@ public class CombatPlayerSpawner : NetworkBehaviour
     public override void OnStopServer()
     {
         base.OnStopServer();
+
         if (SceneManager != null)
         {
             SceneManager.OnLoadEnd -= SceneManager_OnLoadEnd;
@@ -29,36 +33,49 @@ public class CombatPlayerSpawner : NetworkBehaviour
 
     private void SceneManager_OnLoadEnd(SceneLoadEndEventArgs args)
     {
-        if (!base.IsServer) return;
+        // Выполняем только на сервере
+        if (!IsServer) return;
 
-        bool targetSceneLoaded = false;
+        // 1. Проверяем, есть ли среди загруженных сцен наша боевая сцена
+        bool isCombatScene = false;
+        Scene loadedCombatScene = default;
+
         if (args.LoadedScenes != null)
         {
-            foreach (var scene in args.LoadedScenes)
+            foreach (Scene scene in args.LoadedScenes)
             {
                 if (scene.name == combatSceneName)
                 {
-                    targetSceneLoaded = true;
+                    isCombatScene = true;
+                    loadedCombatScene = scene;
                     break;
                 }
             }
         }
 
-        if (!targetSceneLoaded) return;
+        if (!isCombatScene) return;
 
-        if (args.QueueData.Connections != null)
+        // Берём все текущие клиентские подключения на сервере
+        var connections = ServerManager.Clients;
+
+        if (connections != null && connections.Count > 0)
         {
-            foreach (NetworkConnection conn in args.QueueData.Connections)
+            foreach (var pair in connections)
             {
-                SpawnPlayer(conn);
+                NetworkConnection conn = pair.Value;
+                if (conn != null && conn.IsActive)
+                {
+                    SpawnPlayer(conn, loadedCombatScene);
+                }
             }
         }
     }
 
-    private void SpawnPlayer(NetworkConnection conn)
+    private void SpawnPlayer(NetworkConnection conn, Scene targetScene)
     {
         if (conn == null || !conn.IsAuthenticated) return;
 
+        // Проверяем, не заспавнен ли уже игрок у этого подключения
         foreach (var obj in conn.Objects)
         {
             if (obj != null && obj.gameObject.name.Contains(playerPrefab.gameObject.name))
@@ -71,6 +88,16 @@ public class CombatPlayerSpawner : NetworkBehaviour
         Quaternion rotation = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
 
         NetworkObject playerInstance = Instantiate(playerPrefab, position, rotation);
-        ServerManager.Spawn(playerInstance, conn);
+
+        // ВАЖНО: передаем targetScene 3-м параметром, чтобы FishNet сразу привязал объект к нужной сцене
+        ServerManager.Spawn(playerInstance, conn, targetScene);
+    }
+
+    private void OnDestroy()
+    {
+        if (SceneManager != null)
+        {
+            SceneManager.OnLoadEnd -= SceneManager_OnLoadEnd;
+        }
     }
 }

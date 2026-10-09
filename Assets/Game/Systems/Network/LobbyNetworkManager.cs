@@ -82,6 +82,7 @@ public class LobbyNetworkManager : MonoBehaviour
         SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, 999);
     }
 
+    //DenEdit
     private void OnLobbyCreated(LobbyCreated_t callback)
     {
         if (callback.m_eResult != EResult.k_EResultOK)
@@ -96,32 +97,89 @@ public class LobbyNetworkManager : MonoBehaviour
         CurrentLobbyID = new CSteamID(callback.m_ulSteamIDLobby);
         HostSteamID = SteamUser.GetSteamID();
 
-        // Сохраняем ID хоста в сервис NetworkManager
         if (networkManager != null)
         {
             networkManager.TargetHostSteamID = HostSteamID;
         }
 
+        // Данные для подключения клиентов по поиску или инвайтам
         SteamMatchmaking.SetLobbyData(CurrentLobbyID, "HostAddress", HostSteamID.ToString());
         SteamMatchmaking.SetLobbyData(CurrentLobbyID, "name", $"{SteamFriends.GetPersonaName()}'s Game");
 
+        // Интеграция с быстрыми инвайтами через Steam Overlay
         SteamFriends.SetRichPresence("connect", $"+connect_lobby {CurrentLobbyID}");
 
         string successMessage = $"[LobbyNetworkManager] Lobby Created! Waiting for player... (ID: {CurrentLobbyID})";
         Debug.Log(successMessage);
         SetDebugText(successMessage);
 
-
-        if (!InstanceFinder.IsServer && !InstanceFinder.IsClient)
+        // Безопасный запуск FishNet
+        var netManager = InstanceFinder.NetworkManager;
+        if (netManager == null)
         {
-            InstanceFinder.NetworkManager.ServerManager.StartConnection();
-            InstanceFinder.NetworkManager.ClientManager.StartConnection();
+            Debug.LogError("[LobbyNetworkManager] FishNet NetworkManager not found!");
+            OnLobbyCreatedEvent?.Invoke(CurrentLobbyID, false);
+            return;
+        }
+
+        if (!netManager.IsServerStarted && !netManager.IsClientStarted)
+        {
+            // Передаем SteamID хоста в транспорт FishySteamworks
+            if (netManager.TransportManager.Transport is FishySteamworks.FishySteamworks fishySteamworks)
+            {
+                fishySteamworks.SetClientAddress(HostSteamID.ToString());
+            }
+            else
+            {
+                Debug.LogWarning("[LobbyNetworkManager] Transport is not FishySteamworks! Address not explicitly set.");
+            }
+
+            netManager.ServerManager.StartConnection();
+            netManager.ClientManager.StartConnection();
             Debug.Log("[LobbyNetworkManager] FishNet Host started successfully!");
         }
 
-
         OnLobbyCreatedEvent?.Invoke(CurrentLobbyID, true);
     }
+    //private void OnLobbyCreated(LobbyCreated_t callback)
+    //{
+    //    if (callback.m_eResult != EResult.k_EResultOK)
+    //    {
+    //        string errorMessage = $"[LobbyNetworkManager] Failed to create lobby: {callback.m_eResult}";
+    //        Debug.LogError(errorMessage);
+    //        SetDebugText(errorMessage);
+    //        OnLobbyCreatedEvent?.Invoke(CSteamID.Nil, false);
+    //        return;
+    //    }
+
+    //    CurrentLobbyID = new CSteamID(callback.m_ulSteamIDLobby);
+    //    HostSteamID = SteamUser.GetSteamID();
+
+    //    // Сохраняем ID хоста в сервис NetworkManager
+    //    if (networkManager != null)
+    //    {
+    //        networkManager.TargetHostSteamID = HostSteamID;
+    //    }
+
+    //    SteamMatchmaking.SetLobbyData(CurrentLobbyID, "HostAddress", HostSteamID.ToString());
+    //    SteamMatchmaking.SetLobbyData(CurrentLobbyID, "name", $"{SteamFriends.GetPersonaName()}'s Game");
+
+    //    SteamFriends.SetRichPresence("connect", $"+connect_lobby {CurrentLobbyID}");
+
+    //    string successMessage = $"[LobbyNetworkManager] Lobby Created! Waiting for player... (ID: {CurrentLobbyID})";
+    //    Debug.Log(successMessage);
+    //    SetDebugText(successMessage);
+
+
+    //    if (!InstanceFinder.IsServer && !InstanceFinder.IsClient)
+    //    {
+    //        InstanceFinder.NetworkManager.ServerManager.StartConnection();
+    //        InstanceFinder.NetworkManager.ClientManager.StartConnection();
+    //        Debug.Log("[LobbyNetworkManager] FishNet Host started successfully!");
+    //    }
+
+    //    OnLobbyCreatedEvent?.Invoke(CurrentLobbyID, true);
+    //}
 
     private void OnGameLobbyJoinRequested(GameLobbyJoinRequested_t callback)
     {
