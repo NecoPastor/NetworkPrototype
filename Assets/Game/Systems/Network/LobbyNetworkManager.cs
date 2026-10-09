@@ -226,7 +226,7 @@ public class LobbyNetworkManager : MonoBehaviour
         else
         {
             // If we are a client, pass host address to transport and start client connection
-            if (!InstanceFinder.IsClient)
+            if (InstanceFinder.IsClient)
             {
                 var transport = InstanceFinder.NetworkManager.GetComponentInChildren<FishySteamworks.FishySteamworks>();
                 if (transport != null)
