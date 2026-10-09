@@ -46,7 +46,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0745665353d06974988958abcea7e2ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Systems.NetworkManagerProvider
-  networkManager: {fileID: 0}
+  networkManager: {fileID: 1122714122202043702}
 --- !u!114 &1122714122202043702
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -61,7 +61,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Game.Systems.SteamNetworkManager
   appId: 480
   onlyInBuildInitialized: 0
-  textDebug: {fileID: 0}
 --- !u!114 &-8494325587478629718
 MonoBehaviour:
   m_ObjectHideFlags: 0
