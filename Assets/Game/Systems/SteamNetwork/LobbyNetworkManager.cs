@@ -1,4 +1,3 @@
-using FishNet;
 using Game.Systems;
 using Game.Systems.Service;
 using Steamworks;
@@ -19,11 +18,11 @@ public class LobbyNetworkManager : MonoBehaviour
 
     [SerializeField] private TMP_Text textDebug;
 
-    private NetworkManager networkManager;
+    private SteamNetworkManager networkManager;
 
     private void Start()
     {
-        if (ServiceLocator.TryGetService(out NetworkManager provider))
+        if (ServiceLocator.TryGetService(out SteamNetworkManager provider))
             networkManager = provider;
 
         if (networkManager == null)
@@ -112,74 +111,8 @@ public class LobbyNetworkManager : MonoBehaviour
         string successMessage = $"[LobbyNetworkManager] Lobby Created! Waiting for player... (ID: {CurrentLobbyID})";
         Debug.Log(successMessage);
         SetDebugText(successMessage);
-
-        // Безопасный запуск FishNet
-        var netManager = InstanceFinder.NetworkManager;
-        if (netManager == null)
-        {
-            Debug.LogError("[LobbyNetworkManager] FishNet NetworkManager not found!");
-            OnLobbyCreatedEvent?.Invoke(CurrentLobbyID, false);
-            return;
-        }
-
-        if (!netManager.IsServerStarted && !netManager.IsClientStarted)
-        {
-            // Передаем SteamID хоста в транспорт FishySteamworks
-            if (netManager.TransportManager.Transport is FishySteamworks.FishySteamworks fishySteamworks)
-            {
-                fishySteamworks.SetClientAddress(HostSteamID.ToString());
-            }
-            else
-            {
-                Debug.LogWarning("[LobbyNetworkManager] Transport is not FishySteamworks! Address not explicitly set.");
-            }
-
-            netManager.ServerManager.StartConnection();
-            netManager.ClientManager.StartConnection();
-            Debug.Log("[LobbyNetworkManager] FishNet Host started successfully!");
-        }
-
         OnLobbyCreatedEvent?.Invoke(CurrentLobbyID, true);
     }
-    //private void OnLobbyCreated(LobbyCreated_t callback)
-    //{
-    //    if (callback.m_eResult != EResult.k_EResultOK)
-    //    {
-    //        string errorMessage = $"[LobbyNetworkManager] Failed to create lobby: {callback.m_eResult}";
-    //        Debug.LogError(errorMessage);
-    //        SetDebugText(errorMessage);
-    //        OnLobbyCreatedEvent?.Invoke(CSteamID.Nil, false);
-    //        return;
-    //    }
-
-    //    CurrentLobbyID = new CSteamID(callback.m_ulSteamIDLobby);
-    //    HostSteamID = SteamUser.GetSteamID();
-
-    //    // Сохраняем ID хоста в сервис NetworkManager
-    //    if (networkManager != null)
-    //    {
-    //        networkManager.TargetHostSteamID = HostSteamID;
-    //    }
-
-    //    SteamMatchmaking.SetLobbyData(CurrentLobbyID, "HostAddress", HostSteamID.ToString());
-    //    SteamMatchmaking.SetLobbyData(CurrentLobbyID, "name", $"{SteamFriends.GetPersonaName()}'s Game");
-
-    //    SteamFriends.SetRichPresence("connect", $"+connect_lobby {CurrentLobbyID}");
-
-    //    string successMessage = $"[LobbyNetworkManager] Lobby Created! Waiting for player... (ID: {CurrentLobbyID})";
-    //    Debug.Log(successMessage);
-    //    SetDebugText(successMessage);
-
-
-    //    if (!InstanceFinder.IsServer && !InstanceFinder.IsClient)
-    //    {
-    //        InstanceFinder.NetworkManager.ServerManager.StartConnection();
-    //        InstanceFinder.NetworkManager.ClientManager.StartConnection();
-    //        Debug.Log("[LobbyNetworkManager] FishNet Host started successfully!");
-    //    }
-
-    //    OnLobbyCreatedEvent?.Invoke(CurrentLobbyID, true);
-    //}
 
     private void OnGameLobbyJoinRequested(GameLobbyJoinRequested_t callback)
     {
@@ -216,29 +149,6 @@ public class LobbyNetworkManager : MonoBehaviour
         string successMessage = $"[LobbyNetworkManager] Successfully in lobby! Member count: {SteamMatchmaking.GetNumLobbyMembers(CurrentLobbyID)}";
         Debug.Log(successMessage);
         SetDebugText(successMessage);
-
-
-        // --- FishNet Integration ---
-        if (HostSteamID == SteamUser.GetSteamID())
-        {
-            // Host already started network connection in OnLobbyCreated, do nothing here to avoid resetting state.
-        }
-        else
-        {
-            // If we are a client, pass host address to transport and start client connection
-            if (InstanceFinder.IsClient)
-            {
-                var transport = InstanceFinder.NetworkManager.GetComponentInChildren<FishySteamworks.FishySteamworks>();
-                if (transport != null)
-                {
-                    transport.SetClientAddress(hostAddressStr);
-                }
-
-                InstanceFinder.NetworkManager.ClientManager.StartConnection();
-                Debug.Log($"[LobbyNetworkManager] FishNet Client started, connecting to host: {hostAddressStr}...");
-            }
-        }
-
         OnLobbyJoinedEvent?.Invoke(true);
     }
 

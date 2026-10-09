@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8848574224094468547}
   - component: {fileID: 6570897296710009482}
-  - component: {fileID: 6933214277256785506}
+  - component: {fileID: 1122714122202043702}
   - component: {fileID: -8494325587478629718}
   m_Layer: 0
   m_Name: NetworkManager
@@ -46,8 +46,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0745665353d06974988958abcea7e2ad, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Game.Systems.NetworkManagerProvider
-  networkManager: {fileID: 6933214277256785506}
---- !u!114 &6933214277256785506
+  networkManager: {fileID: 0}
+--- !u!114 &1122714122202043702
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -56,9 +56,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 7689422881882183260}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 454ee6567c3f47d438fbd4dd994fe95b, type: 3}
+  m_Script: {fileID: 11500000, guid: c7e757cf674c6cb4398a716ff99b9cdf, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Systems.SteamNetworkManager
   appId: 480
   onlyInBuildInitialized: 0
   textDebug: {fileID: 0}

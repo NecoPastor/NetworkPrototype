@@ -21,11 +21,11 @@ public class LobbyChatManager : MonoBehaviour
     [SerializeField] private Button sendButton;
     [SerializeField] private ScrollRect chatScrollRect;
 
-    private NetworkManager networkManager;
+    private SteamNetworkManager networkManager;
 
     private void Start()
     {
-        if (ServiceLocator.TryGetService(out NetworkManager provider))
+        if (ServiceLocator.TryGetService(out SteamNetworkManager provider))
         {
             networkManager = provider;
         }

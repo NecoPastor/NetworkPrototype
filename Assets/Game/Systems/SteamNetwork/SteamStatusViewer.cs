@@ -28,7 +28,7 @@ namespace Game.Systems
         [SerializeField] private Color _headerColor = new Color(0.4f, 0.7f, 1f);
 
         [Header("References")]
-        [SerializeField] private NetworkManager _networkManager;
+        [SerializeField] private SteamNetworkManager _networkManager;
 
         private Texture2D _backgroundTexture;
         private GUIStyle _windowBoxStyle;
@@ -39,7 +39,7 @@ namespace Game.Systems
         {
             if (_networkManager == null)
             {
-                _networkManager = FindFirstObjectByType<NetworkManager>();
+                _networkManager = FindFirstObjectByType<SteamNetworkManager>();
             }
 
             UpdateWindowPosition();
@@ -62,7 +62,7 @@ namespace Game.Systems
 
             if (_networkManager == null)
             {
-                _networkManager = FindFirstObjectByType<NetworkManager>();
+                _networkManager = FindFirstObjectByType<SteamNetworkManager>();
             }
         }
 

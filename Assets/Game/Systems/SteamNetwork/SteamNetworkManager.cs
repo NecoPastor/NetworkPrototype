@@ -1,18 +1,14 @@
 using Steamworks;
 using System;
-using TMPro;
 using UnityEngine;
 
 namespace Game.Systems
 {
-    public class NetworkManager : MonoBehaviour
+    public class SteamNetworkManager : MonoBehaviour
     {
         [Header("Steam Settings")]
         public uint appId = 480;
         [SerializeField] private bool onlyInBuildInitialized;
-
-        [Header("Debug")]
-        [SerializeField] private TMP_Text textDebug;
 
         public bool IsInitialized { get; private set; }
         public CSteamID TargetHostSteamID { get; set; } = CSteamID.Nil;
@@ -171,19 +167,16 @@ namespace Game.Systems
         private void Log(string message)
         {
             Debug.Log(message);
-            if (textDebug != null) textDebug.text = message;
         }
 
         private void LogWarning(string message)
         {
             Debug.LogWarning(message);
-            if (textDebug != null) textDebug.text = message;
         }
 
         private void LogError(string message)
         {
             Debug.LogError(message);
-            if (textDebug != null) textDebug.text = message;
         }
     }
 }
