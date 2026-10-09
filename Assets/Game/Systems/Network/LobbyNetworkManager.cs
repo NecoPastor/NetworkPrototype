@@ -238,8 +238,6 @@ public class LobbyNetworkManager : MonoBehaviour
                 Debug.Log($"[LobbyNetworkManager] FishNet Client started, connecting to host: {hostAddressStr}...");
             }
         }
-        // ---------------------------
-
 
         OnLobbyJoinedEvent?.Invoke(true);
     }

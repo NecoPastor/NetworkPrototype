@@ -11,21 +11,25 @@ namespace Game.Systems
         public uint appId = 480;
         [SerializeField] private bool onlyInBuildInitialized;
 
-        [Header("Auto Reconnect Settings")]
-        [SerializeField] private bool autoReconnect = true;
-        [SerializeField] private float reconnectInterval = 5f;
-
         [Header("Debug")]
         [SerializeField] private TMP_Text textDebug;
 
         public bool IsInitialized { get; private set; }
         public CSteamID TargetHostSteamID { get; set; } = CSteamID.Nil;
+        public CSteamID CurrentLobbyID { get; private set; } = CSteamID.Nil;
 
         // События состояния подключения
         public event Action OnSteamConnected;
         public event Action OnSteamDisconnected;
+        public event Action<CSteamID> OnLobbyStateChanged;
 
-        private float reconnectTimer;
+        private Callback<LobbyCreated_t> _lobbyCreatedCallback;
+        private Callback<LobbyEnter_t> _lobbyEnterCallback;
+
+        private void Start()
+        {
+            InitializeSteam();
+        }
 
         public void InitializeSteam()
         {
@@ -36,6 +40,18 @@ namespace Game.Systems
             }
 
             if (IsInitialized) return;
+
+            if (Application.isEditor)
+            {
+                try
+                {
+                    System.IO.File.WriteAllText("steam_appid.txt", appId.ToString());
+                }
+                catch (Exception e)
+                {
+                    LogError($"[Steamworks.NET] Could not write steam_appid.txt: {e.Message}");
+                }
+            }
 
             if (!Packsize.Test())
             {
@@ -51,8 +67,6 @@ namespace Game.Systems
 
             try
             {
-                System.IO.File.WriteAllText("steam_appid.txt", appId.ToString());
-
                 IsInitialized = SteamAPI.Init();
 
                 if (!IsInitialized)
@@ -61,11 +75,14 @@ namespace Game.Systems
                     return;
                 }
 
+                // Регистрируем отслеживание лобби
+                _lobbyCreatedCallback = Callback<LobbyCreated_t>.Create(OnLobbyCreated);
+                _lobbyEnterCallback = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
+
                 string personName = SteamFriends.GetPersonaName();
                 CSteamID steamId = SteamUser.GetSteamID();
                 Log($"[Steamworks.NET] Connected! Player: {personName} ({steamId})");
 
-                reconnectTimer = 0f;
                 OnSteamConnected?.Invoke();
             }
             catch (Exception e)
@@ -76,29 +93,39 @@ namespace Game.Systems
 
         private void Update()
         {
-            if (!IsInitialized)
-            {
-                // Если авто-переподключение включено, проверяем таймер
-                if (autoReconnect)
-                {
-                    reconnectTimer += Time.deltaTime;
-                    if (reconnectTimer >= reconnectInterval)
-                    {
-                        reconnectTimer = 0f;
-                        Log("[Steamworks.NET] Attempting to reconnect to Steam...");
-                        InitializeSteam();
-                    }
-                }
-                return;
-            }
+            if (!IsInitialized) return;
 
             // Обработка внутренних событий Steam
             SteamAPI.RunCallbacks();
 
-            // Проверка активности соединения с серверами Steam
             if (!SteamUser.BLoggedOn())
             {
                 HandleDisconnection("[Steamworks.NET] Lost connection to Steam servers.");
+            }
+        }
+
+        private void OnLobbyCreated(LobbyCreated_t callback)
+        {
+            if (callback.m_eResult == EResult.k_EResultOK)
+            {
+                CurrentLobbyID = new CSteamID(callback.m_ulSteamIDLobby);
+                OnLobbyStateChanged?.Invoke(CurrentLobbyID);
+            }
+        }
+
+        private void OnLobbyEntered(LobbyEnter_t callback)
+        {
+            CurrentLobbyID = new CSteamID(callback.m_ulSteamIDLobby);
+            OnLobbyStateChanged?.Invoke(CurrentLobbyID);
+        }
+
+        public void LeaveLobby()
+        {
+            if (CurrentLobbyID != CSteamID.Nil)
+            {
+                SteamMatchmaking.LeaveLobby(CurrentLobbyID);
+                CurrentLobbyID = CSteamID.Nil;
+                OnLobbyStateChanged?.Invoke(CurrentLobbyID);
             }
         }
 
@@ -113,7 +140,11 @@ namespace Game.Systems
             {
                 try
                 {
-                    SteamAPI.RunCallbacks();
+                    LeaveLobby();
+
+                    _lobbyCreatedCallback?.Dispose();
+                    _lobbyEnterCallback?.Dispose();
+
                     SteamAPI.Shutdown();
                     Log("[Steamworks.NET] SteamAPI Shutdown completed.");
                 }
@@ -133,35 +164,26 @@ namespace Game.Systems
         {
             LogError(reason);
             IsInitialized = false;
-            reconnectTimer = 0f; // Сбрасываем таймер, чтобы следующая попытка пошла с нуля
+            CurrentLobbyID = CSteamID.Nil;
             OnSteamDisconnected?.Invoke();
         }
 
         private void Log(string message)
         {
             Debug.Log(message);
-            if (textDebug != null)
-            {
-                textDebug.text = message;
-            }
+            if (textDebug != null) textDebug.text = message;
         }
 
         private void LogWarning(string message)
         {
             Debug.LogWarning(message);
-            if (textDebug != null)
-            {
-                textDebug.text = message;
-            }
+            if (textDebug != null) textDebug.text = message;
         }
 
         private void LogError(string message)
         {
             Debug.LogError(message);
-            if (textDebug != null)
-            {
-                textDebug.text = message;
-            }
+            if (textDebug != null) textDebug.text = message;
         }
     }
 }

@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 6988718747548172291}
   - component: {fileID: 5650382140486468838}
   - component: {fileID: 4366153349434193630}
+  - component: {fileID: 9080730944804086161}
   m_Layer: 0
   m_Name: FishNetworkManager
   m_TagString: Untagged
@@ -83,3 +84,31 @@ MonoBehaviour:
   _maximumClients: 9001
   _peerToPeer: 1
   _clientAddress: 
+--- !u!114 &9080730944804086161
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 445169776846272940}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 95fb60e56bef9a54d98a122388febce5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FishNetStatusViewer
+  _showGUI: 1
+  _anchor: 1
+  _guiRect:
+    serializedVersion: 2
+    x: 330
+    y: 10
+    width: 300
+    height: 300
+  _allowDraggable: 1
+  _backgroundColor: {r: 0.3433962, g: 0.33108574, b: 0.33108574, a: 0.85}
+  _textColor: {r: 1, g: 1, b: 1, a: 1}
+  _headerColor: {r: 0.4, g: 0.7, b: 1, a: 1}
+  _serverStatus: Not Active
+  _clientStatus: Not Active
+  _connectedClientsCount: 0
+  _pingMs: 0

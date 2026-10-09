@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 8848574224094468547}
   - component: {fileID: 6570897296710009482}
   - component: {fileID: 6933214277256785506}
+  - component: {fileID: -8494325587478629718}
   m_Layer: 0
   m_Name: NetworkManager
   m_TagString: Untagged
@@ -60,6 +61,30 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   appId: 480
   onlyInBuildInitialized: 0
-  autoReconnect: 1
-  reconnectInterval: 1
   textDebug: {fileID: 0}
+--- !u!114 &-8494325587478629718
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7689422881882183260}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ea14b92376c7c840a87e350dc144865, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Game.Systems.SteamStatusViewer
+  _showGUI: 1
+  _toggleKey: 284
+  _anchor: 0
+  _guiRect:
+    serializedVersion: 2
+    x: 10
+    y: 10
+    width: 300
+    height: 300
+  _allowDraggable: 1
+  _backgroundColor: {r: 0.34509805, g: 0.32941177, b: 0.32941177, a: 0.8509804}
+  _textColor: {r: 1, g: 1, b: 1, a: 1}
+  _headerColor: {r: 0.4, g: 0.7, b: 1, a: 1}
+  _networkManager: {fileID: 0}
