@@ -1,9 +1,12 @@
 using Steamworks;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class LobbyPlayerList : MonoBehaviour
 {
+    [SerializeField] private LobbyNetworkManager lobby;
+    [SerializeField] private Button inviteButton;
     [SerializeField] private TMP_Text playerListText;
 
     private Callback<LobbyEnter_t> lobbyEnterCallback;
@@ -16,6 +19,42 @@ public class LobbyPlayerList : MonoBehaviour
         {
             lobbyEnterCallback = Callback<LobbyEnter_t>.Create(OnLobbyEntered);
             lobbyChatUpdateCallback = Callback<LobbyChatUpdate_t>.Create(OnLobbyChatUpdate);
+        }
+
+        if (inviteButton != null)
+        {
+            inviteButton.onClick.AddListener(OnInviteButtonClicked);
+            inviteButton.interactable = false;
+        }
+
+        lobby.OnLobbyCreatedEvent += OnLobbyCreated;
+        lobby.OnLobbyJoinedEvent += OnLobbyJoined;
+    }
+
+    private void OnInviteButtonClicked()
+    {
+        lobby.OpenInviteOverlay();
+    }
+
+    private void OnLobbyCreated(CSteamID lobbyId, bool success)
+    {
+        if (success)
+        {
+            if (inviteButton != null)
+            {
+                inviteButton.interactable = true;
+            }
+        }
+    }
+
+    private void OnLobbyJoined(bool success)
+    {
+        if (success)
+        {
+            if (inviteButton != null)
+            {
+                inviteButton.interactable = true;
+            }
         }
     }
 
@@ -64,5 +103,29 @@ public class LobbyPlayerList : MonoBehaviour
         }
 
         playerListText.text = resultText;
+    }
+
+    private void OnDisable()
+    {
+        if (inviteButton != null)
+        {
+            inviteButton.onClick.RemoveListener(OnInviteButtonClicked);
+            inviteButton.interactable = false;
+        }
+
+        if (lobby != null)
+        {
+            lobby.OnLobbyCreatedEvent -= OnLobbyCreated;
+            lobby.OnLobbyJoinedEvent -= OnLobbyJoined;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (lobby != null)
+        {
+            lobby.OnLobbyCreatedEvent -= OnLobbyCreated;
+            lobby.OnLobbyJoinedEvent -= OnLobbyJoined;
+        }
     }
 }

@@ -7,167 +7,218 @@ using UnityEngine;
 
 namespace Game.Systems.SteamNetwork
 {
-    /// <summary>
-    /// Диспетчер сетевых сообщений на базе SteamNetworkingSockets
-    /// </summary>
-    public class SteamNetworkDispatcher
+    public class SteamNetworkDispatcher : IDisposable
     {
-        private delegate void MessageHandlerDelegate(HSteamNetConnection conn, BinaryReader reader);
+        private delegate void P2PMessageHandlerDelegate(CSteamID senderId, IntPtr dataPtr, int dataSize);
+        private delegate void LobbyMessageHandlerDelegate(CSteamID senderId, BinaryReader reader);
 
-        // Словарь для хранения обработчиков по MessageId
-        private readonly Dictionary<ushort, MessageHandlerDelegate> _handlers = new();
+        // Хранилища обработчиков по MessageId
+        private readonly Dictionary<ushort, P2PMessageHandlerDelegate> _p2pHandlers = new();
+        private readonly Dictionary<ushort, LobbyMessageHandlerDelegate> _lobbyHandlers = new();
 
-        // Кешированные буферы для работы без лишнего GC
-        private readonly MemoryStream _sendStream = new(4096);
-        private readonly BinaryWriter _writer;
+        // Буферы для фазы лобби
+        private readonly MemoryStream _lobbySendStream = new(2048);
+        private readonly BinaryWriter _lobbyWriter;
+
+        // Callbacks Steam
+        private Callback<LobbyChatMsg_t> _lobbyChatMsgCallback;
+        private CSteamID _currentLobbyId = CSteamID.Nil;
 
         public SteamNetworkDispatcher()
         {
-            _writer = new BinaryWriter(_sendStream);
+            _lobbyWriter = new BinaryWriter(_lobbySendStream);
+            _lobbyChatMsgCallback = Callback<LobbyChatMsg_t>.Create(OnLobbyChatMessageReceived);
         }
 
-        #region Registration
+        public void SetLobby(CSteamID lobbyId)
+        {
+            _currentLobbyId = lobbyId;
+        }
+
+        #region Handler Registration
 
         /// <summary>
-        /// Регистрация обработчика входящих сообщений типа T
+        /// Регистрация обработчика для P2P-сокетов (структуры фиксированного размера через Marshal)
         /// </summary>
-        public void RegisterHandler<T>(Action<HSteamNetConnection, T> handler) where T : INetworkMessage, new()
+        public void RegisterP2PHandler<T>(Action<CSteamID, T> handler) where T : struct, INetworkMessage
         {
-            T dummy = new T();
+            T dummy = default;
             ushort msgId = dummy.MessageId;
 
-            _handlers[msgId] = (conn, reader) =>
+            _p2pHandlers[msgId] = (senderId, dataPtr, dataSize) =>
             {
-                T msg = new T();
-                msg.Deserialize(reader);
-                handler?.Invoke(conn, msg);
+                if (dataSize < Marshal.SizeOf<T>())
+                {
+                    Debug.LogError($"[Dispatcher] P2P message size mismatch for ID {msgId}. Expected: {Marshal.SizeOf<T>()}, Received: {dataSize}");
+                    return;
+                }
+
+                T msg = Marshal.PtrToStructure<T>(dataPtr);
+                handler?.Invoke(senderId, msg);
             };
         }
 
         /// <summary>
-        /// Отмена регистрации обработчика сообщений типа T
+        /// Регистрация обработчика для сообщений Лобби (динамические данные через BinaryReader)
         /// </summary>
-        public void UnregisterHandler<T>() where T : INetworkMessage, new()
+        public void RegisterLobbyHandler<T>(Action<CSteamID, T> handler, Func<BinaryReader, T> deserializer) where T : INetworkMessage, new()
         {
             T dummy = new T();
-            _handlers.Remove(dummy.MessageId);
+            ushort msgId = dummy.MessageId;
+
+            _lobbyHandlers[msgId] = (senderId, reader) =>
+            {
+                T msg = deserializer(reader);
+                handler?.Invoke(senderId, msg);
+            };
+        }
+
+        public void UnregisterP2PHandler<T>() where T : struct, INetworkMessage
+        {
+            T dummy = default;
+            _p2pHandlers.Remove(dummy.MessageId);
+        }
+
+        public void UnregisterLobbyHandler<T>() where T : INetworkMessage, new()
+        {
+            T dummy = new T();
+            _lobbyHandlers.Remove(dummy.MessageId);
         }
 
         #endregion
 
-        #region Sending
+        #region Gameplay (P2P Sockets via Marshal)
 
         /// <summary>
-        /// Отправка сообщения конкретному соединению
+        /// Отправка C#-структуры через SteamNetworkingSockets с помощью Marshal (Zero-GC)
         /// </summary>
-        public bool Send<T>(HSteamNetConnection connection, T message, int sendFlags = Constants.k_nSteamNetworkingSend_Reliable) where T : INetworkMessage
+        public bool SendP2P<T>(HSteamNetConnection connection, T message, int sendFlags = Constants.k_nSteamNetworkingSend_Reliable) where T : struct, INetworkMessage
         {
-            _sendStream.SetLength(0);
+            int size = Marshal.SizeOf<T>();
+            IntPtr ptr = Marshal.AllocHGlobal(size);
 
-            // 1. Записываем ID сообщения (2 байта)
-            _writer.Write(message.MessageId);
-
-            // 2. Сериализуем полезную нагрузку
-            message.Serialize(_writer);
-            _writer.Flush();
-
-            byte[] buffer = _sendStream.GetBuffer();
-            int length = (int)_sendStream.Length;
-
-            // Передача байтов через SteamNetworkingSockets
-            GCHandle handle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
             try
             {
-                IntPtr ptr = handle.AddrOfPinnedObject();
-                EResult result = SteamNetworkingSockets.SendMessageToConnection(connection, ptr, (uint)length, sendFlags, out _);
+                Marshal.StructureToPtr(message, ptr, false);
+
+                EResult result = SteamNetworkingSockets.SendMessageToConnection(
+                    connection,
+                    ptr,
+                    (uint)size,
+                    sendFlags,
+                    out _
+                );
+
                 return result == EResult.k_EResultOK;
             }
             finally
             {
-                handle.Free();
+                Marshal.FreeHGlobal(ptr);
             }
         }
 
         /// <summary>
-        /// Массовая отправка сообщения списку подключений
+        /// Опрос входящих P2P-пакетов по соединению (вызывается в Update)
         /// </summary>
-        public void Broadcast<T>(IReadOnlyList<HSteamNetConnection> connections, T message, int sendFlags = Constants.k_nSteamNetworkingSend_Reliable) where T : INetworkMessage
+        public void PollP2PMessages(HSteamNetConnection connection)
         {
-            for (int i = 0; i < connections.Count; i++)
-            {
-                Send(connections[i], message, sendFlags);
-            }
-        }
+            IntPtr[] messageBuffer = new IntPtr[16];
+            int count = SteamNetworkingSockets.ReceiveMessagesOnConnection(connection, messageBuffer, messageBuffer.Length);
 
-        #endregion
-
-        #region Polling / Receiving
-
-        /// <summary>
-        /// Чтение входящих сообщений через группу опроса (Server / Host)
-        /// </summary>
-        public void PollIncomingMessages(HSteamNetPollGroup pollGroup, int maxMessages = 32)
-        {
-            IntPtr[] msgPointers = new IntPtr[maxMessages];
-
-            // В Steamworks.NET сообщения с группы серверов читаются через ReceiveMessagesOnPollGroup
-            int numMsgs = SteamNetworkingSockets.ReceiveMessagesOnPollGroup(pollGroup, msgPointers, maxMessages);
-
-            if (numMsgs > 0)
-            {
-                ProcessMessages(msgPointers, numMsgs);
-            }
-        }
-
-        /// <summary>
-        /// Чтение входящих сообщений с точечного соединения (Client)
-        /// </summary>
-        public void PollIncomingMessages(HSteamNetConnection connection, int maxMessages = 32)
-        {
-            IntPtr[] msgPointers = new IntPtr[maxMessages];
-
-            // Чтение для одиночного клиента
-            int numMsgs = SteamNetworkingSockets.ReceiveMessagesOnConnection(connection, msgPointers, maxMessages);
-
-            if (numMsgs > 0)
-            {
-                ProcessMessages(msgPointers, numMsgs);
-            }
-        }
-
-        private void ProcessMessages(IntPtr[] msgPointers, int count)
-        {
             for (int i = 0; i < count; i++)
             {
-                // Получаем структуру сообщения по указателю
-                SteamNetworkingMessage_t netMsg = SteamNetworkingMessage_t.FromIntPtr(msgPointers[i]);
+                SteamNetworkingMessage_t netMsg = Marshal.PtrToStructure<SteamNetworkingMessage_t>(messageBuffer[i]);
 
-                byte[] data = new byte[netMsg.m_cbSize];
-                Marshal.Copy(netMsg.m_pData, data, 0, netMsg.m_cbSize);
-
-                using (MemoryStream recvStream = new MemoryStream(data))
-                using (BinaryReader reader = new BinaryReader(recvStream))
+                // Первые 2 байта любая наша P2P-структура содержит MessageId
+                if (netMsg.m_cbSize >= sizeof(ushort))
                 {
-                    if (recvStream.Length >= sizeof(ushort))
-                    {
-                        ushort msgId = reader.ReadUInt16();
+                    ushort msgId = (ushort)Marshal.ReadInt16(netMsg.m_pData);
 
-                        if (_handlers.TryGetValue(msgId, out var handler))
-                        {
-                            handler.Invoke(netMsg.m_conn, reader);
-                        }
-                        else
-                        {
-                            Debug.LogWarning($"[SteamNetwork] Неизвестный MessageID: {msgId}");
-                        }
+                    if (_p2pHandlers.TryGetValue(msgId, out var handler))
+                    {
+                        CSteamID senderId = netMsg.m_identityPeer.GetSteamID();
+                        handler.Invoke(senderId, netMsg.m_pData, netMsg.m_cbSize);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[Dispatcher] Unhandled P2P MessageID: {msgId}");
                     }
                 }
 
-                // Освобождаем нативную память Steam
-                SteamNetworkingMessage_t.Release(msgPointers[i]);
+                // Освобождаем нативную память сообщения Steam
+                SteamNetworkingMessage_t.Release(messageBuffer[i]);
             }
         }
 
         #endregion
+
+        #region Lobby Phase (SteamMatchmaking)
+
+        /// <summary>
+        /// Отправка сообщения участникам Лобби через SteamMatchmaking.SendLobbyChatMsg
+        /// </summary>
+        public bool SendLobbyMessage<T>(T message, Action<BinaryWriter> serializer) where T : INetworkMessage
+        {
+            if (!_currentLobbyId.IsValid())
+            {
+                Debug.LogWarning("[Dispatcher] Cannot send lobby message: Invalid Lobby ID.");
+                return false;
+            }
+
+            _lobbySendStream.SetLength(0);
+
+            // 1. Записываем 2 байта MessageId
+            _lobbyWriter.Write(message.MessageId);
+
+            // 2. Сериализуем данные
+            serializer(_lobbyWriter);
+            _lobbyWriter.Flush();
+
+            byte[] data = _lobbySendStream.ToArray();
+
+            return SteamMatchmaking.SendLobbyChatMsg(_currentLobbyId, data, data.Length);
+        }
+
+        private void OnLobbyChatMessageReceived(LobbyChatMsg_t callback)
+        {
+            CSteamID lobbyID = new CSteamID(callback.m_ulSteamIDLobby);
+            if (_currentLobbyId != CSteamID.Nil && lobbyID != _currentLobbyId)
+                return;
+
+            byte[] buffer = new byte[4096];
+
+            int bytesRead = SteamMatchmaking.GetLobbyChatEntry(
+                lobbyID,
+                (int)callback.m_iChatID,
+                out CSteamID senderID,
+                buffer,
+                buffer.Length,
+                out EChatEntryType chatEntryType
+            );
+
+            if (bytesRead >= sizeof(ushort) && chatEntryType == EChatEntryType.k_EChatEntryTypeChatMsg)
+            {
+                using (MemoryStream recvStream = new MemoryStream(buffer, 0, bytesRead))
+                using (BinaryReader reader = new BinaryReader(recvStream))
+                {
+                    ushort msgId = reader.ReadUInt16();
+
+                    if (_lobbyHandlers.TryGetValue(msgId, out var handler))
+                    {
+                        handler.Invoke(senderID, reader);
+                    }
+                }
+            }
+        }
+
+        #endregion
+
+        public void Dispose()
+        {
+            _lobbyChatMsgCallback?.Dispose();
+            _lobbyChatMsgCallback = null;
+            _p2pHandlers.Clear();
+            _lobbyHandlers.Clear();
+        }
     }
 }

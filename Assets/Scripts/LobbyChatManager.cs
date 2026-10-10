@@ -1,5 +1,5 @@
-using Game.Systems;
 using Game.Systems.Service;
+using Game.Systems.SteamNetwork;
 using Steamworks;
 using System;
 using System.Collections;
@@ -11,8 +11,6 @@ public class LobbyChatManager : MonoBehaviour
 {
     public event Action<CSteamID, string> OnChatMessageReceived;
 
-    private Callback<LobbyChatMsg_t> m_LobbyChatMsg;
-
     [SerializeField] private LobbyNetworkManager lobby;
 
     [Header("UI References")]
@@ -21,28 +19,36 @@ public class LobbyChatManager : MonoBehaviour
     [SerializeField] private Button sendButton;
     [SerializeField] private ScrollRect chatScrollRect;
 
-    private SteamNetworkManager networkManager;
+    private SteamNetworkManager networkService;
 
     private void Start()
     {
-        if (ServiceLocator.TryGetService(out SteamNetworkManager provider))
+        if (ServiceLocator.TryGetService(out SteamNetworkManager service))
         {
-            networkManager = provider;
+            networkService = service;
         }
 
-        if (networkManager == null || !networkManager.IsInitialized)
+        if (networkService == null)
         {
-            Debug.LogWarning("[LobbyChatManager] NetworkManager provider is not initialized. Chat disabled.");
+            Debug.LogWarning("[LobbyChatManager] SteamNetworkService is not available. Chat disabled.");
             return;
         }
 
-        RegisterCallbacks();
+        RegisterHandlers();
         BindUI();
     }
 
-    private void RegisterCallbacks()
+    private void RegisterHandlers()
     {
-        m_LobbyChatMsg = Callback<LobbyChatMsg_t>.Create(OnLobbyChatMessage);
+        networkService.RegisterLobbyHandler<ChatMessage>(OnChatMessageReceivedHandler, ChatMessage.Deserialize);
+    }
+
+    private void UnregisterHandlers()
+    {
+        if (networkService != null)
+        {
+            networkService.UnregisterLobbyHandler<ChatMessage>();
+        }
     }
 
     private void BindUI()
@@ -66,55 +72,35 @@ public class LobbyChatManager : MonoBehaviour
         if (!currentLobby.IsValid())
             return;
 
+        // Синхронизируем ID лобби с диспетчером перед отправкой
+        networkService.SetLobby(currentLobby);
+
         string messageText = inputFieldMessage.text.Trim();
+        ChatMessage msg = new ChatMessage(messageText);
 
-        // Steam C++ API ожидает null-terminated UTF-8 строку (\0)
-        byte[] messageBytes = System.Text.Encoding.UTF8.GetBytes(messageText + "\0");
-
-        bool success = SteamMatchmaking.SendLobbyChatMsg(currentLobby, messageBytes, messageBytes.Length);
+        bool success = networkService.SendLobbyMessage(msg, writer => msg.Serialize(writer));
         if (success)
         {
             inputFieldMessage.text = string.Empty;
         }
         else
         {
-            Debug.LogError("[LobbyChatManager] Failed to send lobby chat message.");
+            Debug.LogError("[LobbyChatManager] Failed to send lobby chat message via Dispatcher.");
         }
     }
 
-    private void OnLobbyChatMessage(LobbyChatMsg_t callback)
+    private void OnChatMessageReceivedHandler(CSteamID senderID, ChatMessage msg)
     {
-        CSteamID lobbyID = new CSteamID(callback.m_ulSteamIDLobby);
+        string message = msg.Content;
+        string senderName = SteamFriends.GetFriendPersonaName(senderID);
+        CSteamID mySteamID = SteamUser.GetSteamID();
 
-        // Проверяем, что сообщение пришло именно из нашего текущего лобби
-        if (lobby != null && lobbyID != lobby.CurrentLobbyID)
-            return;
+        string formattedMessage = senderID == mySteamID
+            ? $"<i>{senderName}</i>: {message}"
+            : $"<color=yellow><i>{senderName}</i>: {message}</color>";
 
-        byte[] data = new byte[4096];
-
-        int bytesRead = SteamMatchmaking.GetLobbyChatEntry(
-            lobbyID,
-            (int)callback.m_iChatID,
-            out CSteamID senderID,
-            data,
-            data.Length,
-            out EChatEntryType chatEntryType
-        );
-
-        if (bytesRead > 0 && chatEntryType == EChatEntryType.k_EChatEntryTypeChatMsg)
-        {
-            // Декодируем и убираем концевой \0
-            string message = System.Text.Encoding.UTF8.GetString(data, 0, bytesRead).TrimEnd('\0');
-            string senderName = SteamFriends.GetFriendPersonaName(senderID);
-            CSteamID mySteamID = SteamUser.GetSteamID();
-
-            string formattedMessage = senderID == mySteamID
-                ? $"<i>{senderName}</i>: {message}"
-                : $"<color=yellow><i>{senderName}</i>: {message}</color>";
-
-            AppendToChatDisplay(formattedMessage);
-            OnChatMessageReceived?.Invoke(senderID, message);
-        }
+        AppendToChatDisplay(formattedMessage);
+        OnChatMessageReceived?.Invoke(senderID, message);
     }
 
     private void AppendToChatDisplay(string message)
@@ -169,13 +155,7 @@ public class LobbyChatManager : MonoBehaviour
 
     private void OnDisable()
     {
-        UnregisterCallbacks();
-    }
-
-    private void UnregisterCallbacks()
-    {
-        m_LobbyChatMsg?.Dispose();
-        m_LobbyChatMsg = null;
+        UnregisterHandlers();
     }
 
     private void OnDestroy()
@@ -185,5 +165,7 @@ public class LobbyChatManager : MonoBehaviour
 
         if (inputFieldMessage != null)
             inputFieldMessage.onSubmit.RemoveListener(OnInputSubmit);
+
+        UnregisterHandlers();
     }
 }

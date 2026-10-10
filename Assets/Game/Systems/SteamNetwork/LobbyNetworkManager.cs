@@ -1,8 +1,7 @@
-using Game.Systems;
 using Game.Systems.Service;
+using Game.Systems.SteamNetwork;
 using Steamworks;
 using System;
-using TMPro;
 using UnityEngine;
 
 public class LobbyNetworkManager : MonoBehaviour
@@ -15,8 +14,6 @@ public class LobbyNetworkManager : MonoBehaviour
     private Callback<GameLobbyJoinRequested_t> m_LobbyJoinRequested;
     private Callback<LobbyEnter_t> m_LobbyEntered;
     private Callback<LobbyChatUpdate_t> m_LobbyChatUpdate;
-
-    [SerializeField] private TMP_Text textDebug;
 
     private SteamNetworkManager networkManager;
 
@@ -43,6 +40,7 @@ public class LobbyNetworkManager : MonoBehaviour
 
         RegisterCallbacks();
         CheckCommandLineInvite();
+        CreateLobby();
     }
 
     private void RegisterCallbacks()
@@ -218,9 +216,5 @@ public class LobbyNetworkManager : MonoBehaviour
 
     private void SetDebugText(string message)
     {
-        if (textDebug != null)
-        {
-            textDebug.text = message;
-        }
     }
 }
